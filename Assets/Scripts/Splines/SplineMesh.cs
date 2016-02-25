@@ -44,36 +44,6 @@ public class SplineMesh : MonoBehaviour {
 
     Log("Number of vertices: " + vertices.Length);
 
-    /*
-    for (int v = 0, y = 0; y <= ySize; y++) {
-      // zSize = 0
-      for (int x = 0; x <= xSize; x++, v++) {
-        float t = (float) x / xSize;
-        Vector3 point = spline.GetPoint(t);
-
-        Vector3 halfWidth = (Vector3.Cross(Vector3.up, spline.GetDirection(t)).normalized * (width / 2f));
-
-        vertices[v] = point + halfWidth;
-        vertices[v].y += y * depth;
-
-        // yield return wait;
-      }
-
-      // zSize = 1
-      for (int x = xSize - 1; x >= 0; x--, v++) {
-        float t = (float) x / xSize;
-        Vector3 point = spline.GetPoint(t);
-
-        Vector3 halfWidth = (Vector3.Cross(Vector3.up, spline.GetDirection(t)).normalized * (width / 2f));
-
-        vertices[v] = point - halfWidth;
-        vertices[v].y += y * depth;
-
-        // yield return wait;
-      }
-    }
-    /**/
-
     int v = 0;
     for (int y = 0; y <= ySize; y++) {
 
@@ -134,77 +104,80 @@ public class SplineMesh : MonoBehaviour {
     Log("Creating triangles");
 
     /**/
-    int quads = xSize * 2;
+    int quads = (xSize * ySize + xSize * zSize + ySize * zSize) * 2;
     int[] triangles = new int[quads * 6];
     int t = 0, v = 0;
     int ring = xSize * 2;
 
-    for (int y = 0; y < ySize; y++, v++) {
-      for (int q = 0; q < ring - 1; q++, v++) {
-        t = SetQuad(triangles, t, v, v + 1, v + ring, v + ring + 1);
-
-        mesh.triangles = triangles;
-        yield return wait;
-      }
-      t = SetQuad(triangles, t, v, v - ring + 1, v + ring, v + 1);
-
-      mesh.triangles = triangles;
-      yield return wait;
-    }
-
-    /**/
-
-    /*
-    int quads = (xSize * ySize + xSize * zSize + ySize * zSize) * 2;
-    int[] triangles = new int[quads * 6];
-    int ring = (xSize + zSize) * 2;
-    int t = 0, v = 0;
-
-    Log("Number of quads: " + quads);
     Log("Number of triangles: " + triangles.Length);
-    Log("Ring size: " + ring);
 
     for (int y = 0; y < ySize; y++, v++) {
       for (int q = 0; q < ring - 1; q++, v++) {
         t = SetQuad(triangles, t, v, v + 1, v + ring, v + ring + 1);
+
         mesh.triangles = triangles;
         yield return wait;
       }
       t = SetQuad(triangles, t, v, v - ring + 1, v + ring, v + 1);
+
       mesh.triangles = triangles;
       yield return wait;
     }
 
-    mesh.triangles = triangles;
-    /**/
-
-    /*
-    int quads = (xSize * ySize + xSize * zSize + ySize * zSize) * 2;
-    int[] triangles = new int[quads * 6];
-
-    int t = 0, v = 0;
-    int ring = (xSize * zSize) * 2;
-
-    for (int q = 0; q < ring - 1; q++, v++) {
-      t = SetQuad(triangles, t, v, v + 1, v + ring, v + ring + 1);
-      // yield return wait;
-    }
-    t = SetQuad(triangles, t, v, v - ring + 1, v + ring, v + 1);
-
-    mesh.triangles = triangles;
-
-    /**/
+    yield return CreateTopFace(triangles, t, ring);
 
     yield return wait;
   }
 
+  private IEnumerator CreateTopFace(int[] triangles, int t, int ring) {
+    WaitForSeconds wait = new WaitForSeconds(0.05f);
+
+    int v = ring * ySize;
+
+    Log("CreateTopFace :: Initial v: " + v);
+    Log("CreateTopFace :: Ring: " + ring);
+
+    for (int i = 1; i < xSize; i++, v++) {
+      t = SetQuad(triangles, t, v, v + 1, (ring * (ySize + 1)) - i, (ring * (ySize + 1)) - (i + 1));
+      mesh.triangles = triangles;
+      yield return wait;
+    }
+
+    mesh.triangles = triangles;
+    yield return wait;
+
+    // return t;
+    yield return CreateBottomFace(triangles, t, ring);
+  }
+
+  private IEnumerator CreateBottomFace(int[] triangles, int t, int ring) {
+    WaitForSeconds wait = new WaitForSeconds(0.05f);
+
+    int v = 0;
+
+    Log("CreateBottomFace :: Initial v: " + v);
+    Log("CreateBottomFace :: Ring: " + ring);
+
+    for (int i = 1; i < xSize; i++, v++) {
+      t = SetQuad(triangles, t, v + 1, v, (ring * ySize) - (i + 1), (ring * ySize) - i);
+      mesh.triangles = triangles;
+      yield return wait;
+    }
+
+    mesh.triangles = triangles;
+    yield return wait;
+
+    // return t;
+    yield return wait;
+  }
+
   private static int SetQuad(int[] triangles, int i, int v00, int v10, int v01, int v11) {
+    Log("SetQuad :: i:" + i + ", v00:" + v00 + ", v10:" + v10 + ", v01:" + v01 + ", v11:" + v11);
+
     triangles[i] = v00;
     triangles[i + 1] = triangles[i + 4] = v01;
     triangles[i + 2] = triangles[i + 3] = v10;
     triangles[i + 5] = v11;
-
-    Log("SetQuad :: i:" + i + ", v00:" + v00 + ", v10:" + v10 + ", v01:" + v01 + ", v11:" + v11);
 
     return i + 6;
   }
